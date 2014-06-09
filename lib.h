@@ -3,6 +3,8 @@
 
 int putc(unsigned char c); /*send a character*/
 int puts(unsigned char *str); /*send string*/
+unsigned char getc(void);
+int gets(unsigned char *buf);
 
 void *memset(void *b, int c, long len);
 void *memcpy(void *dst, const void *src, long len);

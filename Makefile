@@ -22,7 +22,7 @@ H8WRITE = ../../tools/h8write/h8write
 HWRITE_SERDEV = /dev/ttyUSB0
 
 OBJS	= vector.o startup.o main.o
-OBJS   += lib.o serial.o
+OBJS   += lib.o serial.o xmodem.o
 
 TARGET = kzload
 
