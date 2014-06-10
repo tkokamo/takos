@@ -52,7 +52,7 @@ int main(void)
   extern int buffer_start; /*defined in ld.scr*/
  
   init();
-  
+  func(1, 2);
   puts("bootloader started\n");
   
   while (1) {
