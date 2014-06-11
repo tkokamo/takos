@@ -55,7 +55,7 @@ int main(void)
   void (*f)(void); //function pointer
 
   init();
-  //  func(1, 2);
+
   puts("bootloader started\n");
   
   while (1) {
