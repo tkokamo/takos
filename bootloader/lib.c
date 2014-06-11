@@ -133,9 +133,3 @@ int gets(unsigned char *buf)
   return i - 1;
 }
 
-int func(int a, int b)
-{
-  volatile int c;
-  c = a + b;
-  return c;
-}
