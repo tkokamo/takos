@@ -132,3 +132,10 @@ int gets(unsigned char *buf)
   } while (c);
   return i - 1;
 }
+
+int func(int a, int b)
+{
+  volatile int c;
+  c = a + b;
+  return c;
+}
