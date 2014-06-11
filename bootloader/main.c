@@ -51,7 +51,9 @@ int main(void)
   static long size = -1;
   static unsigned char *loadbuf = NULL;
   extern int buffer_start; /*defined in ld.scr*/
- 
+  char *entry_point;
+  void (*f)(void); //function pointer
+
   init();
   
   puts("bootloader started\n");
@@ -75,7 +77,16 @@ int main(void)
       puts("\n");
       dump(loadbuf, size);
     } else if (!strcmp(buf, "run")) {
-      elf_load(loadbuf);
+      entry_point = elf_load(loadbuf);
+      if (!entry_point) {
+	puts("run error!\n");
+      } else {
+	puts("starting from entry point:");
+	putxval((unsigned long)entry_point, 0);
+	puts("\n");
+	f = (void (*)(void))entry_point;
+	f(); /*jmp to entry_point*/
+      }
     } else {
       puts("unknown.\n");
     }

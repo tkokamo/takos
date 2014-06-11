@@ -1,4 +1,0 @@
-takos
-=====
-
-my first os

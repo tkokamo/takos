@@ -1,33 +1,22 @@
-/* OUTPUT_FORMAT("elf32-h8300") */
+OUTPUT_FORMAT("elf32-h8300")
 OUTPUT_ARCH(h8300h)
 ENTRY("_start")
 
 MEMORY
 {
-	romall(rx)	: o = 0x000000, l = 0x080000 /*512 KB*/
-	vectors(r)	: o = 0x000000, l = 0x000100 /*Top of ROM*/
-	rom(rx)		: o = 0x000100, l = 0x07ff00 
-
 	ramall(rwx)	: o = 0xffbf20, l = 0x004000 /*16 KB*/
-	buffer(rwx)	: o = 0xffdf20, l = 0x001d00 /*8  KB*/
-	data(rwx)	: o = 0xfffc20, l = 0x000300
+	ram(rwx)	: o = 0xffc020, l = 0x003f00
 	stack(rw)	: o = 0xffff00, l = 0x000000 /*end of RAM*/
 }
 
 
 SECTIONS
 {
-	/* no more needed  . = 0x0; because we have MEMORY */ 
-
-	.vectors : {
-		vector.o(.data)
-	} > vectors
-
 	.text : {
 	      	_text_start = . ;
 		*(.text)
 		_etext = . ;
-	} > rom
+	} > ram
 
 	/*rodata put on the back of .text section*/
 	.rodata : {
@@ -36,24 +25,21 @@ SECTIONS
 		*(.rodata)
 		*(.rodata.*)
 		_erodata = . ;
-	} > rom
+	} > ram
 
-	.buffer : {
-		_buffer_start = . ;
-	} > buffer
 
 	.data : {
 	      	_data_start = . ;
 		*(.data)
 		_edata = . ;
-	} > data AT> rom /*VA!=PA . "AT> rom" means that .data section PA is at rom*/ 
+	} > ram
 
 	.bss : {
 		_bss_start = . ;
 		*(.bss)
 		*(COMMON)
 		_ebss = . ;
-	} > data AT> rom
+	} > ram
 
 	. = ALIGN(4);
 	_end = . ;
