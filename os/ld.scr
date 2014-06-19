@@ -5,6 +5,7 @@ ENTRY("_start")
 MEMORY
 {
 	ramall(rwx)	: o = 0xffbf20, l = 0x004000 /*16 KB*/
+	softvec(rw)	: o = 0xffbf20, l = 0x000040 /*64 B*/
 	ram(rwx)	: o = 0xffc020, l = 0x003f00
 	stack(rw)	: o = 0xffff00, l = 0x000000 /*end of RAM*/
 }
@@ -12,6 +13,10 @@ MEMORY
 
 SECTIONS
 {
+	.softvec : {
+		_softvec = . ;
+	} > softvec
+
 	.text : {
 	      	_text_start = . ;
 		*(.text)

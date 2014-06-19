@@ -16,7 +16,7 @@ RANLIB	= $(BINDER)/$(ADDNAME)ranlib
 STRIP	= $(BINDER)/$(ADDNAME)strip
 
 
-OBJS	= startup.o main.o
+OBJS	= startup.o main.o interrupt.o
 OBJS   += lib.o serial.o 
 TARGET = takos
 
@@ -29,6 +29,10 @@ CFLAGS += -DTAKOS
 
 #linker option
 LFLAGS = -static -T ld.scr -L.
+
+.SUFFIXES: .c .o
+.SUFFIXES: .s .o
+.SUFFIXES: .S .o
 
 all :	$(TARGET)
 
@@ -43,6 +47,8 @@ $(TARGET) :	$(OBJS)
 .s.o:	$<
 	$(CC) -c $(CFLAGS) $<
 
+.S.o:	$<
+	$(CC) -c $(CFLAGS) $<
 
 clean :
 	rm -f $(OBJS) $(TARGET) $(TARGET).elf
