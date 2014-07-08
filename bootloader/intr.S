@@ -13,8 +13,12 @@ _intr_softerr:
 	mov.l	er1, @-er7
 	mov.l	er0, @-er7
 	mov.l	er7, er1		  // 2nd param: stack pointer
+	mov.l	#_intrstack, sp 	  // set intrstack address to stack pointer
+	mov.l	er1, @-er7		  // store old sp to the bottom of current sp
 	mov.w	#SOFTVEC_TYPE_SOFTERR, r0 // 1st param: software interrupt
 	jsr	@_interrupt
+	mov.l	@er7+, er1		  // load old sp to er1
+	mov.l	er1, er7
 	mov.l	@er7+, er0
 	mov.l	@er7+, er1
 	mov.l	@er7+, er2
@@ -35,8 +39,12 @@ _intr_syscall:
 	mov.l	er1, @-er7
 	mov.l	er0, @-er7
 	mov.l	er7, er1		  // 2nd param: stack pointer
+	mov.l	#_intrstack, sp 	  // set intrstack address to stack pointer
+	mov.l	er1, @-er7		  // store old sp to the bottom of current sp
 	mov.w	#SOFTVEC_TYPE_SYSCALL, r0 // 1st param: software interrupt
 	jsr	@_interrupt
+	mov.l	@er7+, er1		  // load old sp to er1
+	mov.l	er1, er7
 	mov.l	@er7+, er0
 	mov.l	@er7+, er1
 	mov.l	@er7+, er2
@@ -57,8 +65,12 @@ _intr_serintr:
 	mov.l	er1, @-er7
 	mov.l	er0, @-er7
 	mov.l	er7, er1		  // 2nd param: stack pointer
+	mov.l	#_intrstack, sp 	  // set intrstack address to stack pointer
+	mov.l	er1, @-er7		  // store old sp to the bottom of current sp
 	mov.w	#SOFTVEC_TYPE_SERINTR, r0 // 1st param: software interrupt
 	jsr	@_interrupt
+	mov.l	@er7+, er1		  // load old sp to er1
+	mov.l	er1, er7
 	mov.l	@er7+, er0
 	mov.l	@er7+, er1
 	mov.l	@er7+, er2
