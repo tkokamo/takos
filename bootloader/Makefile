@@ -21,7 +21,7 @@ H8WRITE = ../../tools/h8write/h8write
 #Linux:/dev/ttySx, Linux(USB):/dev/ttyUSBx, Windows:comX
 HWRITE_SERDEV = /dev/ttyUSB0
 
-OBJS	= vector.o startup.o main.o
+OBJS	= vector.o startup.o intr.o main.o interrupt.o
 OBJS   += lib.o serial.o xmodem.o elf.o
 
 TARGET = kzload
@@ -32,6 +32,11 @@ CFLAGS += -I.
 #CFLAGS += -g
 CFLAGS += -Os
 CFLAGS += -DKZLOAD
+
+.SUFFIXES: .c .o
+.SUFFIXES: .s .o
+.SUFFIXES: .S .o
+
 
 #linker option
 LFLAGS = -static -T ld.scr -L.
@@ -47,6 +52,9 @@ $(TARGET) :	$(OBJS)
 	$(CC) -c $(CFLAGS) $<
 
 .s.o:	$<
+	$(CC) -c $(CFLAGS) $<
+
+.S.o:	$<
 	$(CC) -c $(CFLAGS) $<
 
 $(TARGET).mot : $(TARGET)
