@@ -124,7 +124,7 @@ static tk_thread_id_t thread_run(tk_func_t func, char *name, int stacksize, int 
   /*** allocate stack ***/
   memset(thread_stack, 0, stacksize);
   thread_stack += stacksize; //update userstack;
-
+  
   thp->stack = thread_stack;
 
   /*** init stack ***/
@@ -136,14 +136,13 @@ static tk_thread_id_t thread_run(tk_func_t func, char *name, int stacksize, int 
   
   *(--sp) = 0; //ER6
   *(--sp) = 0; //ER5
-  *(--sp) = 0;
-  *(--sp) = 0;
-  *(--sp) = 0;
-  *(--sp) = 0;
-  *(--sp) = 0;
+  *(--sp) = 0; //ER4
+  *(--sp) = 0; //ER3
+  *(--sp) = 0; //ER2
+  *(--sp) = 0; //ER1
 	  
   /*** params to thread_init ***/
-  *(--sp) = (uint32)thread_init;
+  *(--sp) = (uint32)thp;
 
   /*** ??? ***/
   thp->context.sp = (uint32)sp;
@@ -255,7 +254,7 @@ void tk_start(tk_func_t func, char *name, int stacksize, int argc, char *argv[])
   readyque.head = readyque.tail = NULL;
   memset(threads, 0, sizeof(threads));
   memset(handlers, 0, sizeof(handlers));
-
+\
   /*** register interrupt handlers ***/
   setintr(SOFTVEC_TYPE_SYSCALL, syscall_intr);
   setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr);

@@ -5,12 +5,11 @@
 int test08_1_main(int argc, char *argv[])
 {
   char buf[32];
-  
   puts("test08_1 started.\n");
   
   while (1) {
     puts("> ");
-    gets("buf");
+    gets(buf);
 
     if (!strncmp(buf, "echo", 4)) {
       puts(buf + 4);
