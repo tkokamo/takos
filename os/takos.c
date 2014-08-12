@@ -7,6 +7,7 @@
 
 #define THREAD_NUM 6 
 #define THREAD_NAME_SIZE 15
+#define PRIORITY_NUM 16
 
 /*** thread context ***/
 typedef struct _tk_context {
@@ -18,6 +19,10 @@ typedef struct _tk_thread {
   struct _tk_thread *next;
   char name[THREAD_NAME_SIZE + 1];
   char *stack; //top address of stack pointer
+  int priority;
+  uint32 flags; 
+#define TK_THREAD_FLAG_READY (1 << 0)
+
 
   struct { //parameters to thread_init()
     tk_func_t func; //main function of a thread
@@ -37,7 +42,7 @@ typedef struct _tk_thread {
 static struct {
   tk_thread *head;
   tk_thread *tail;
-} readyque;
+} readyque[PRIORITY_NUM]; //ready queue for every priority
 
 static tk_thread *current;
 static tk_thread threads[THREAD_NUM];
@@ -52,11 +57,17 @@ static int getcurrent(void)
     return -1;
   }
 
-  /*** pull current thread from the head of the ready queue ***/
-  readyque.head = current->next;
-  if (readyque.head == NULL) {
-    readyque.tail = NULL;
+  /*** if current thread is not ready, do nothing ***/
+  if (!(current->flags & TK_THREAD_FLAG_READY)) {
+    return 1;
   }
+
+  /*** pull current thread from the head of the ready queue ***/
+  readyque[current->priority].head = current->next;
+  if (readyque[current->priority].head == NULL) {
+    readyque[current->priority].tail = NULL;
+  }
+  current->flags &= ~TK_THREAD_FLAG_READY; //disable ready flag because current thread is not in the ready queue any more
   current->next = NULL;
   
   return 0;
@@ -68,13 +79,19 @@ static int putcurrent(void)
   if (current == NULL) {
     return -1;
   }
-
-  if (readyque.tail) {
-    readyque.tail->next = current;
-  } else {
-    readyque.head = current;
+  
+  /*** if current thread is ready, do nothing ***/
+  if (current->flags & TK_THREAD_FLAG_READY) {
+    return 1;
   }
-  readyque.tail = current;
+
+  if (readyque[current->priority].tail) {
+    readyque[current->priority].tail->next = current;
+  } else {
+    readyque[current->priority].head = current;
+  }
+  current->flags |= TK_THREAD_FLAG_READY; //enable ready flag
+  readyque[current->priority].tail = current;
   
   return 0;
 }
@@ -93,7 +110,7 @@ static void thread_init(tk_thread *thp)
 }
 
 /*** syscall: tk_run() ***/
-static tk_thread_id_t thread_run(tk_func_t func, char *name, int stacksize, int argc, char *argv[])
+static tk_thread_id_t thread_run(tk_func_t func, char *name, int priority, int stacksize, int argc, char *argv[])
 {
   int i;
   tk_thread *thp;
@@ -116,7 +133,9 @@ static tk_thread_id_t thread_run(tk_func_t func, char *name, int stacksize, int 
   /*** setup TCB ***/
   strcpy(thp->name, name);
   thp->next = NULL;
-  
+  thp->priority = priority;
+  thp->flags = 0;
+
   thp->init.func = func;
   thp->init.argc = argc;
   thp->init.argv = argv;
@@ -131,8 +150,8 @@ static tk_thread_id_t thread_run(tk_func_t func, char *name, int stacksize, int 
   sp = (uint32 *)thp->stack;
   *(--sp) = (uint32)thread_end; 
 
-  /*** set program counter ***/
-  *(--sp) = (uint32)thread_init; // set to pc when the thread is dispatched
+  /*** set program counter. if the priority equals to 0, forbid interruption***/
+  *(--sp) = (uint32)thread_init | ((uint32)(priority ? 0 : 0xc0) << 24); // set to pc when the thread is dispatched
   
   *(--sp) = 0; //ER6
   *(--sp) = 0; //ER5
@@ -170,6 +189,50 @@ static int thread_exit(void)
   return 0; 
 }
 
+/*** syscall: tk_wait ***/
+static int thread_wait(void)
+{
+  putcurrent();
+  return 0;
+}
+
+/*** syscall: tk_sleep ***/
+static int thread_sleep(void)
+{
+  return 0; //thread remains out of ready queue 
+}
+
+/*** syscall: tk_wakeup ***/
+static int thread_wakeup(tk_thread_id_t t)
+{
+  /*** put the thread calling thread_wakeup to the tail of ready queue ***/
+  putcurrent();
+
+  /*** put the specified thread by t to the tail of ready queue and wake up ***/
+  current = (tk_thread *)id; 
+  putcurrent();
+
+  return 0;
+
+}
+
+/*** syscall: tk_getid ***/
+static tk_thread_id_t thread_getid(void)
+{
+  putcurrent();
+  return (tk_thread_id_t) current; //TCB address is thread ID
+}
+
+/*** syscall: tk_chpri ***/
+static int thread_chpri(int priority)
+{
+  int old = current->priority;
+  if (priority >= 0)
+    current->priority = priority; //change priority
+  putcurrent(); //put the thread to new ready queue
+  return old;
+}
+
 /*** register interrupt handler ***/
 static int setintr(softvec_type_t type, tk_handler_t handler)
 {
@@ -179,8 +242,6 @@ static int setintr(softvec_type_t type, tk_handler_t handler)
   softvec_setintr(type, thread_intr);
 
   handlers[type] = handler;
-
-  return 0;
 }
 
 /*** call system call ***/
@@ -188,10 +249,25 @@ static void call_functions(tk_syscall_type_t type, tk_syscall_param_t *p)
 {
   switch (type) {
   case TK_SYSCALL_TYPE_RUN: /*tk_run*/
-    p->un.run.ret = thread_run(p->un.run.func, p->un.run.name, p->un.run.stacksize, p->un.run.argc, p->un.run.argv); //call tk_run
+    p->un.run.ret = thread_run(p->un.run.func, p->un.run.name, p->un.run.priority, p->un.run.stacksize, p->un.run.argc, p->un.run.argv); //call tk_run
     break;
   case TK_SYSCALL_TYPE_EXIT: /*tk_exit*/
     thread_exit(); // do not write return value not to delete TCB
+    break;
+  case TK_SYSCALL_TYPE_WAIT: /*tk_wait*/
+    p->un.wait.ret = thread_wait();
+    break;
+  case TK_SYSCALL_TYPE_SLEEP: /*tk_sleep*/
+    p->un.sleep.ret = thread_sleep();
+    break;
+  case TK_SYSCALL_TYPE_WAKEUP: /*tk_wakeup*/
+    p->un.wakeup.ret = thread_wakeup(p->un.wakeup.id);
+    break;
+  case TK_SYSCALL_TYPE_GETID: /*tk_getid*/
+    p->un.getid.ret = thread_getid();
+    break;
+  case TK_SYSCALL_TYPE_CHPRI: /*tk_chpri*/
+    p->un.chpri.ret = thread_chpri(p->un.chpri.priority);
     break;
   default:
     break;
