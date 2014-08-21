@@ -203,7 +203,7 @@ static int thread_sleep(void)
 }
 
 /*** syscall: tk_wakeup ***/
-static int thread_wakeup(tk_thread_id_t t)
+static int thread_wakeup(tk_thread_id_t id)
 {
   /*** put the thread calling thread_wakeup to the tail of ready queue ***/
   putcurrent();
@@ -242,6 +242,8 @@ static int setintr(softvec_type_t type, tk_handler_t handler)
   softvec_setintr(type, thread_intr);
 
   handlers[type] = handler;
+
+  return 0;
 }
 
 /*** call system call ***/
@@ -284,10 +286,16 @@ static void syscall_proc(tk_syscall_type_t type, tk_syscall_param_t *p)
 /*** thread scheduling ***/
 static void schedule(void)
 {
-  if (!readyque.head)
+  int i;
+  
+  /*** search ready thread ***/
+  for (i = 0; i < PRIORITY_NUM; i++) {
+    if (readyque[i].head)
+      break;
+  }
+  if (i == PRIORITY_NUM)
     tk_sysdown();
-
-  current = readyque.head;
+  current = readyque[i].head;
 }
 
 /*** call system call from the current thread ***/
@@ -299,7 +307,7 @@ static void syscall_intr(void)
 /*** software error occurrs ***/
 static void softerr_intr(void)
 {
-  puts("current->name");
+  puts(current->name);
   puts(" DOWN\n");
   getcurrent();
   thread_exit(); //force quit
@@ -322,21 +330,21 @@ static void thread_intr(softvec_type_t type, unsigned long sp)
 }
 
 /*** run initial thread ***/
-void tk_start(tk_func_t func, char *name, int stacksize, int argc, char *argv[])
+void tk_start(tk_func_t func, char *name, int priority, int stacksize, int argc, char *argv[])
 {
   /*** init current ***/
   current = NULL;
 
-  readyque.head = readyque.tail = NULL;
+  memset(readyque, 0, sizeof(readyque));
   memset(threads, 0, sizeof(threads));
   memset(handlers, 0, sizeof(handlers));
-\
+
   /*** register interrupt handlers ***/
   setintr(SOFTVEC_TYPE_SYSCALL, syscall_intr);
   setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr);
 
   /*** call function directly because this function can not call system calls ***/
-  current = (tk_thread *)thread_run(func, name, stacksize, argc, argv);
+  current = (tk_thread *)thread_run(func, name, priority, stacksize, argc, argv);
 
   /*** dispatch ***/
   dispatch(&current->context);

@@ -9,7 +9,7 @@ tk_thread_id_t tk_run(tk_func_t func, char *name, int priority, int stacksize, i
 void tk_exit(void); //exit from thread
 int tk_wait(void);
 int tk_sleep(void);
-int tk_wakeup(kz_thread_id_t id);
+int tk_wakeup(tk_thread_id_t id);
 tk_thread_id_t tk_getid(void);
 int tk_chpri(int priority);
 
