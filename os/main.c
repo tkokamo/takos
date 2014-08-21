@@ -3,10 +3,23 @@
 #include "interrupt.h"
 #include "lib.h"
 
+tk_thread_id_t test09_1_id;
+tk_thread_id_t test09_2_id;
+tk_thread_id_t test09_3_id;
+
 /*** run system task and user thread ***/
 static int start_threads(int argc, char *argv[])
 {
-  tk_run(test08_1_main, "command", 0x100, 0, NULL);
+  test09_1_id = tk_run(test09_1_main, "test09_1", 1, 0x100, 0, NULL);
+  test09_2_id = tk_run(test09_2_main, "test09_2", 2, 0x100, 0, NULL);
+  test09_3_id = tk_run(test09_3_main, "test09_3", 3, 0x100, 0, NULL);
+  
+  /*** change priority to 15 and become idle thread ***/
+  tk_chpri(15);
+  INTR_ENABLE;
+  while (1) {
+    asm volatile ("sleep");
+  }
   return 0;
 }
 
@@ -18,7 +31,7 @@ int main(void)
   puts("takos boot succeed!\n");
 
   /*** kernel thread ***/
-  tk_start(start_threads, "start", 0x100, 0, NULL);
+  tk_start(start_threads, "idle", 0, 0x100, 0, NULL);
   /*** never return here ***/
   return 0;
 }
