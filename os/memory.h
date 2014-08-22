@@ -5,5 +5,4 @@ int tkmem_init(void); //init dynamic memory
 void *tkmem_alloc(int size); //allocate memory
 void tkmem_free(void *mem); //free memory
 
-
 #endif

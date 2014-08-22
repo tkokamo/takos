@@ -3,6 +3,7 @@
 #include "intr.h"
 #include "interrupt.h"
 #include "syscall.h"
+#include "memory.h"
 #include "lib.h"
 
 #define THREAD_NUM 6 
@@ -233,6 +234,21 @@ static int thread_chpri(int priority)
   return old;
 }
 
+/*** syscall: tk_malloc ***/
+static void *thread_malloc(int size)
+{
+  putcurrent();
+  return tkmem_alloc(size);
+}
+
+/*** syscall: tk_free ***/
+static int thread_free(char *p)
+{
+  tkmem_free(p);
+  putcurrent();
+  return 0;
+}
+
 /*** register interrupt handler ***/
 static int setintr(softvec_type_t type, tk_handler_t handler)
 {
@@ -270,6 +286,12 @@ static void call_functions(tk_syscall_type_t type, tk_syscall_param_t *p)
     break;
   case TK_SYSCALL_TYPE_CHPRI: /*tk_chpri*/
     p->un.chpri.ret = thread_chpri(p->un.chpri.priority);
+    break;
+  case TK_SYSCALL_TYPE_MALLOC: /*tk_malloc*/
+    p->un.malloc.ret = thread_malloc(p->un.malloc.size);
+    break;
+  case TK_SYSCALL_TYPE_FREE: /*tk_free*/
+    p->un.free.ret = thread_free(p->un.free.p);
     break;
   default:
     break;
@@ -332,6 +354,8 @@ static void thread_intr(softvec_type_t type, unsigned long sp)
 /*** run initial thread ***/
 void tk_start(tk_func_t func, char *name, int priority, int stacksize, int argc, char *argv[])
 {
+  tkmem_init();
+   
   /*** init current ***/
   current = NULL;
 

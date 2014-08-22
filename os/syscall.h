@@ -12,6 +12,8 @@ typedef enum {
   TK_SYSCALL_TYPE_WAKEUP,
   TK_SYSCALL_TYPE_GETID,
   TK_SYSCALL_TYPE_CHPRI,
+  TK_SYSCALL_TYPE_MALLOC,
+  TK_SYSCALL_TYPE_FREE,
 } tk_syscall_type_t;
 
 /*** define params for system call ***/
@@ -46,6 +48,14 @@ typedef struct {
       int priority;
       int ret;
     } chpri;
+    struct {
+      int size;
+      void *ret;
+    } malloc;
+    struct {
+      char *p;
+      int ret;
+    } free;
   } un;
 } tk_syscall_param_t;
 

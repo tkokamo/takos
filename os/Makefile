@@ -19,7 +19,7 @@ STRIP	= $(BINDER)/$(ADDNAME)strip
 OBJS	= startup.o main.o interrupt.o
 OBJS   += lib.o serial.o
 #source of takos	
-OBJS   += takos.o syscall.o test09_1.o test09_2.o test09_3.o
+OBJS   += takos.o syscall.o memory.o test10_1.o
 TARGET = takos
 
 CFLAGS = -Wall -mh -nostdinc -nostdlib -fno-builtin
