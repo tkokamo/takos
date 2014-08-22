@@ -59,3 +59,18 @@ int tk_chpri(int priority)
   return param.un.chpri.ret;
 }
 
+void *tk_malloc(int size)
+{
+  tk_syscall_param_t param;
+  param.un.malloc.size = size;
+  tk_syscall(TK_SYSCALL_TYPE_MALLOC, &param);
+  return param.un.malloc.ret;
+}
+
+int tk_free(void *p)
+{
+  tk_syscall_param_t param;
+  param.un.free.p = p;
+  tk_syscall(TK_SYSCALL_TYPE_FREE, &param);
+  return param.un.free.ret;
+}
