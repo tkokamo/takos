@@ -74,3 +74,23 @@ int tk_free(void *p)
   tk_syscall(TK_SYSCALL_TYPE_FREE, &param);
   return param.un.free.ret;
 }
+
+int tk_send(tk_msgbox_id_t id, int size, char *p)
+{
+  tk_syscall_param_t param;
+  param.un.send.id = id;
+  param.un.send.size = size;
+  param.un.send.p = p;
+  tk_syscall(TK_SYSCALL_TYPE_SEND, &param);
+  return param.un.send.ret;
+}
+
+tk_thread_id_t tk_recv(tk_msgbox_id_t id, int *sizep, char **pp)
+{
+  tk_syscall_param_t param;
+  param.un.recv.id = id;
+  param.un.recv.sizep = sizep;
+  param.un.recv.pp = pp;
+  tk_syscall(TK_SYSCALL_TYPE_RECV, &param);
+  return param.un.recv.ret;
+}

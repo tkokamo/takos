@@ -14,6 +14,8 @@ tk_thread_id_t tk_getid(void);
 int tk_chpri(int priority);
 void *tk_malloc(int size);
 int tk_free(void *p);
+int tk_send(tk_msgbox_id_t id, int size, char *p);
+tk_thread_id_t tk_recv(tk_msgbox_id_t id, int *sizep, char **pp);
 
 
 /*** library function ***/
@@ -22,6 +24,7 @@ void tk_sysdown(void); //call when fatal error occurs
 void tk_syscall(tk_syscall_type_t type, tk_syscall_param_t *param); // run syscall
 
 /*** user thread ***/
-int test10_1_main(int argc, char *argv[]);
+int test11_1_main(int argc, char *argv[]);
+int test11_2_main(int argc, char *argv[]);
 
 #endif

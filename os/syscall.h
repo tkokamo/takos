@@ -14,6 +14,8 @@ typedef enum {
   TK_SYSCALL_TYPE_CHPRI,
   TK_SYSCALL_TYPE_MALLOC,
   TK_SYSCALL_TYPE_FREE,
+  TK_SYSCALL_TYPE_SEND,
+  TK_SYSCALL_TYPE_RECV,
 } tk_syscall_type_t;
 
 /*** define params for system call ***/
@@ -56,6 +58,18 @@ typedef struct {
       char *p;
       int ret;
     } free;
+    struct {
+      tk_msgbox_id_t id;
+      int size;
+      char *p;
+      int ret;
+    } send;
+    struct {
+      tk_msgbox_id_t id;
+      int *sizep;
+      char **pp;
+      tk_msgbox_id_t ret;
+    } recv;
   } un;
 } tk_syscall_param_t;
 

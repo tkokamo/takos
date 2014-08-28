@@ -24,7 +24,6 @@ typedef struct _tk_thread {
   uint32 flags; 
 #define TK_THREAD_FLAG_READY (1 << 0)
 
-
   struct { //parameters to thread_init()
     tk_func_t func; //main function of a thread
     int argc; 
@@ -39,6 +38,30 @@ typedef struct _tk_thread {
   tk_context context;
 } tk_thread;
 
+/*** message buffer ***/
+typedef struct _tk_msgbuf {
+  struct _tk_msgbuf *next;
+  tk_thread *sender;
+  struct {
+    int size;
+    char *p;
+  } param;
+} tk_msgbuf;
+
+/*** message box ***/
+typedef struct _tk_msgbox {
+  tk_thread *receiver;
+  tk_msgbuf *head;
+  tk_msgbuf *tail;
+
+  /* Because H8 is 16 bit CPU, there are no 32bit mult instructions.
+   * So, if the size of a struct is not 2 exponentiation, mult instructions are used to calculate the index of a struct and
+   * there sometimes issue a link error like "___mulsi3 is not found". (if the size is 2 exponentiation, shift inst is used)
+   * To solve this problem, use dummy member. 
+   */
+  long dummy[1]; 
+} tk_msgbox;
+
 /*** ready queue ***/
 static struct {
   tk_thread *head;
@@ -48,6 +71,7 @@ static struct {
 static tk_thread *current;
 static tk_thread threads[THREAD_NUM];
 static tk_handler_t handlers[SOFTVEC_TYPE_NUM];
+static tk_msgbox msgboxes[MSGBOX_ID_NUM];
 
 void dispatch(tk_context *context);
 
@@ -249,6 +273,98 @@ static int thread_free(char *p)
   return 0;
 }
 
+/*** send message ***/
+static void sendmsg(tk_msgbox *mboxp, tk_thread *thp, int size, char *p)
+{
+  tk_msgbuf *mp;
+  
+  /*** create a msg buf ***/
+  mp = (tk_msgbuf*) tkmem_alloc(sizeof(*mp));
+  if (mp == NULL)
+    tk_sysdown();
+
+  mp->next = NULL;
+  mp->sender = thp;
+  mp->param.size = size;
+  mp->param.p = p;
+
+  /*** put the msg buf to the tail of the msg box ***/
+  if (mboxp->tail) {
+    mboxp->tail->next = mp;
+  } else {
+    mboxp->head = mp;
+  }
+  mboxp->tail = mp;
+}
+
+/*** recv message ***/
+static void recvmsg(tk_msgbox *mboxp)
+{
+  tk_msgbuf *mp;
+  tk_syscall_param_t *p;
+  
+  /*** get the msg put on the head of mboxp ***/
+  mp = mboxp->head;
+  mboxp->head = mp->next;
+  if (mboxp->head == NULL) 
+    mboxp->tail = NULL;
+  mp->next = NULL;
+
+  /*** set return value ***/
+  p = mboxp->receiver->syscall.param;
+  p->un.recv.ret = (tk_thread_id_t)mp->sender;
+  if (p->un.recv.sizep)
+    *(p->un.recv.sizep) = mp->param.size;
+  if (p->un.recv.pp)
+    *(p->un.recv.pp) = mp->param.p;
+
+  /*** set receiver to NULL because there are no thread waiting for recv ***/
+  mboxp->receiver = NULL;
+
+  /*** free msg buf ***/
+  tkmem_free(mp);
+}
+
+/*** syscall: tk_send ***/
+static int thread_send(tk_msgbox_id_t id, int size, char *p)
+{
+  tk_msgbox *mboxp = &msgboxes[id];
+
+  putcurrent();
+  sendmsg(mboxp, current, size, p);
+
+  /*** if there exists a receiver, receive ***/
+  if (mboxp->receiver) {
+    current = mboxp->receiver;
+    recvmsg(mboxp);
+    putcurrent();
+  }
+
+  return size;
+}
+
+/*** syscall: tk_recv ***/
+static tk_thread_id_t thread_recv(tk_msgbox_id_t id, int *sizep, char **pp)
+{
+  tk_msgbox *mboxp = &msgboxes[id];
+
+  /*** if receiver exists, shutdown ***/
+  if (mboxp->receiver) 
+    tk_sysdown();
+
+  mboxp->receiver = current;
+
+  if (mboxp->head == NULL) {
+
+    return -1;
+  }
+    
+  recvmsg(mboxp);
+  putcurrent(); //put to the tail because recv finished
+
+  return current->syscall.param->un.recv.ret;
+}
+
 /*** register interrupt handler ***/
 static int setintr(softvec_type_t type, tk_handler_t handler)
 {
@@ -292,6 +408,12 @@ static void call_functions(tk_syscall_type_t type, tk_syscall_param_t *p)
     break;
   case TK_SYSCALL_TYPE_FREE: /*tk_free*/
     p->un.free.ret = thread_free(p->un.free.p);
+    break;
+  case TK_SYSCALL_TYPE_SEND: /*tk_send*/
+    p->un.send.ret = thread_send(p->un.send.id, p->un.send.size, p->un.send.p);
+    break;
+  case TK_SYSCALL_TYPE_RECV: /*tk_recv*/
+    p->un.recv.ret = thread_recv(p->un.recv.id, p->un.recv.sizep, p->un.recv.pp);
     break;
   default:
     break;
@@ -362,6 +484,7 @@ void tk_start(tk_func_t func, char *name, int priority, int stacksize, int argc,
   memset(readyque, 0, sizeof(readyque));
   memset(threads, 0, sizeof(threads));
   memset(handlers, 0, sizeof(handlers));
+  memset(msgboxes, 0, sizeof(msgboxes));
 
   /*** register interrupt handlers ***/
   setintr(SOFTVEC_TYPE_SYSCALL, syscall_intr);

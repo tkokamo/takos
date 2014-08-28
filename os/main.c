@@ -8,7 +8,8 @@
 static int start_threads(int argc, char *argv[])
 {
 
-  tk_run(test10_1_main, "test10_1", 1, 0x100, 0, NULL);
+  tk_run(test11_1_main, "test11_1", 1, 0x100, 0, NULL);
+  tk_run(test11_2_main, "test11_2", 2, 0x100, 0, NULL);
   
   /*** change priority to 15 and become idle thread ***/
   tk_chpri(15);
