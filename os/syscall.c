@@ -1,5 +1,6 @@
 #include "defines.h"
 #include "takos.h"
+#include "interrupt.h"
 #include "syscall.h"
 
 /*** system call ***/
@@ -93,4 +94,48 @@ tk_thread_id_t tk_recv(tk_msgbox_id_t id, int *sizep, char **pp)
   param.un.recv.pp = pp;
   tk_syscall(TK_SYSCALL_TYPE_RECV, &param);
   return param.un.recv.ret;
+}
+
+int tk_setintr(softvec_type_t type, tk_handler_t handler)
+{
+  tk_syscall_param_t param;
+  param.un.setintr.type = type;
+  param.un.setintr.handler = handler;
+  tk_syscall(TK_SYSCALL_TYPE_SETINTR, &param);
+  return param.un.setintr.ret;
+}
+
+/*** service calls ***/
+int tk_wakeup(tk_thread_id_t id)
+{
+  tk_syscall_param_t param;
+  param.un.wakeup.id = id;
+  tk_syscall(TK_SYSCALL_TYPE_WAKEUP, &param);
+  return param.un.wakeup.ret;
+}
+
+void *tx_malloc(int size)
+{
+  tk_syscall_param_t param;
+  param.un.malloc.size = size;
+  tk_srvcall(TK_SYSCALL_TYPE_MALLOC, &param);
+  return param.un.malloc.ret;
+}
+
+int tx_free(void *p)
+{
+  tk_syscall_param_t param;
+  param.un.free.p = p;
+  tk_srvcall(TK_SYSCALL_TYPE_FREE, &param);
+  return param.un.free.ret;
+}
+
+int tx_send(tk_msgbox_id_t id, int size, char *p)
+{
+  tk_syscall_param_t param;
+  param.un.send.id = id;
+  param.un.send.size = size;
+  param.un.send.p = p;
+  tk_srvcall(TK_SYSCALL_TYPE_SEND, &param);
+  return param.un.send.free;
 }

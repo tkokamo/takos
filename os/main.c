@@ -26,6 +26,12 @@ int main(void)
   INTR_DISABLE; /*disable interrupt*/
 
   puts("takos boot succeed!\n");
+  /*** LED chika! at port1 ***/
+//  unsigned char *p1;
+  // p1 = 0xfffd2;
+  //*(unsigned char *)0xee002 = 0xff;
+  //*p1 = 0x00; //off
+  asm volatile("sleep");
 
   /*** kernel thread ***/
   tk_start(start_threads, "idle", 0, 0x100, 0, NULL);

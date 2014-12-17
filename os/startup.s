@@ -4,6 +4,8 @@
 	#	.type	_start,@function
 _start:
 	mov.l	#_bootstack,sp
+//	mov.b   #0xff, @0x0ee002:24
+//	mov.b   #0x00, @0x0fffd2:24
 	jsr	@_main
 
 1:

@@ -2,6 +2,7 @@
 #define _TAKOS_SYSCALL_H_INCLUDED_
 
 #include "defines.h"
+#include "interrupt.h"
 
 /*** define the number of system call ***/
 typedef enum {
@@ -16,6 +17,7 @@ typedef enum {
   TK_SYSCALL_TYPE_FREE,
   TK_SYSCALL_TYPE_SEND,
   TK_SYSCALL_TYPE_RECV,
+  TK_SYSCALL_TYPE_SETINTR,
 } tk_syscall_type_t;
 
 /*** define params for system call ***/
@@ -70,6 +72,11 @@ typedef struct {
       char **pp;
       tk_msgbox_id_t ret;
     } recv;
+    struct {
+      softvec_type_t type;
+      tk_handler_t handler;
+      int ret;
+    } setintr;
   } un;
 } tk_syscall_param_t;
 
