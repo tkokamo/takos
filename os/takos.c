@@ -365,8 +365,8 @@ static tk_thread_id_t thread_recv(tk_msgbox_id_t id, int *sizep, char **pp)
   return current->syscall.param->un.recv.ret;
 }
 
-/*** register interrupt handler ***/
-static int setintr(softvec_type_t type, tk_handler_t handler)
+/*** system call: tk_setintr ***/
+static int thread_setintr(softvec_type_t type, tk_handler_t handler)
 {
   static void thread_intr(softvec_type_t type, unsigned long sp);
 
@@ -374,6 +374,7 @@ static int setintr(softvec_type_t type, tk_handler_t handler)
   softvec_setintr(type, thread_intr);
 
   handlers[type] = handler;
+  putcurrent(); // put to the tail
 
   return 0;
 }
@@ -415,6 +416,9 @@ static void call_functions(tk_syscall_type_t type, tk_syscall_param_t *p)
   case TK_SYSCALL_TYPE_RECV: /*tk_recv*/
     p->un.recv.ret = thread_recv(p->un.recv.id, p->un.recv.sizep, p->un.recv.pp);
     break;
+  case TK_SYSCALL_TYPE_SETINTR: /*tk_setintr*/
+    p->un.setintr.ret = thread_setintr(p->un.setintr.type, p->un.setintr.handler);
+    break;
   default:
     break;
   }
@@ -424,6 +428,18 @@ static void call_functions(tk_syscall_type_t type, tk_syscall_param_t *p)
 static void syscall_proc(tk_syscall_type_t type, tk_syscall_param_t *p)
 {
   getcurrent(); //remove the thread that called syscall_proc from the ready queue
+  call_functions(type, p);
+}
+
+/*** processing service call ***/
+static void srvcall_proc(tk_syscall_type_t type, tk_syscall_param_t *p)
+{
+  /*
+   * Some system calls and service calls refer to current thread, which would lead to miss processing/ 
+   * So, set current to NULL. 
+   * After service calls, current is set in thread_intrvec()
+   */
+  current = NULL;
   call_functions(type, p);
 }
 
@@ -487,8 +503,8 @@ void tk_start(tk_func_t func, char *name, int priority, int stacksize, int argc,
   memset(msgboxes, 0, sizeof(msgboxes));
 
   /*** register interrupt handlers ***/
-  setintr(SOFTVEC_TYPE_SYSCALL, syscall_intr);
-  setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr);
+  thread_setintr(SOFTVEC_TYPE_SYSCALL, syscall_intr);
+  thread_setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr);
 
   /*** call function directly because this function can not call system calls ***/
   current = (tk_thread *)thread_run(func, name, priority, stacksize, argc, argv);
@@ -512,4 +528,10 @@ void tk_syscall(tk_syscall_type_t type, tk_syscall_param_t *param)
   current->syscall.type = type;
   current->syscall.param = param;
   asm volatile("trapa #0"); //issue trap interruption
+}
+
+/*** library function for  ***/
+void tk_srvcall(tk_syscall_type_t type, tk_syscall_param_t *param)
+{
+  srvcall_proc(type, param);
 }

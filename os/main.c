@@ -31,7 +31,7 @@ int main(void)
   // p1 = 0xfffd2;
   //*(unsigned char *)0xee002 = 0xff;
   //*p1 = 0x00; //off
-  asm volatile("sleep");
+  //  asm volatile("sleep");
 
   /*** kernel thread ***/
   tk_start(start_threads, "idle", 0, 0x100, 0, NULL);

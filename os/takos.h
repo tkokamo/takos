@@ -16,15 +16,23 @@ void *tk_malloc(int size);
 int tk_free(void *p);
 int tk_send(tk_msgbox_id_t id, int size, char *p);
 tk_thread_id_t tk_recv(tk_msgbox_id_t id, int *sizep, char **pp);
+int tk_setintr(softvec_type_t type, tk_handler_t handler);
 
+/*** service call ***/
+int tx_wakeup(tk_thread_id_t id);
+void *tx_malloc(int size);
+int tx_free(void *p);
+int tx_send(tk_msgbox_id_t id, int size, char *p);
 
 /*** library function ***/
 void tk_start(tk_func_t func, char *name, int priority, int stacksize, int argc, char *argv[]); //init thread
 void tk_sysdown(void); //call when fatal error occurs
 void tk_syscall(tk_syscall_type_t type, tk_syscall_param_t *param); // run syscall
+void tk_srvcall(tk_syscall_type_t type, tk_syscall_param_t *param); // run srvcall
+ 
+/*** system task ***/
+int consdrv_main(int argc, char *argv[]);
 
-/*** user thread ***/
-int test11_1_main(int argc, char *argv[]);
-int test11_2_main(int argc, char *argv[]);
-
+/*** user task ***/
+int commnad_main(int argc, char *argv[]);
 #endif
